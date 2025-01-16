@@ -1,0 +1,30 @@
+name: Prevent Rebase
+
+on:
+  push:
+    branches:
+      - main  # or any branch you want to protect
+
+jobs:
+  check-rebase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
+
+      - name: Check for rebase
+        run: |
+          # Check if the last commit has a direct ancestor in the previous state of the branch
+          OLD_COMMIT=$(git rev-parse HEAD@{1})
+          NEW_COMMIT=$(git rev-parse HEAD)
+          
+          if ! git merge-base --is-ancestor $OLD_COMMIT $NEW_COMMIT; then
+            echo "Error: Rebase detected. Push rejected."
+            exit 1
+          fi
+
+      - name: Fail if rebase detected
+        if: failure()
+        run: exit 1
